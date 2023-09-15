@@ -181,7 +181,7 @@ EGFR_Binder_scFv.down$pi <- pi$pi
 EGFR_Binder_scFv.down <- arrange(EGFR_Binder_scFv.down, desc(pi))
 
 library(ggheatmap)
-#### cluster 5
+#### cluster C5
 cluster4 <- cluster.sig.markers[which(cluster.sig.markers$cluster=="4"),]
 cluster4 <- arrange(cluster4, desc(avg_log2FC))
 Control.up.cluster4 <- intersect(cluster4$gene, EGFR_Binder_scFv.up$gene)
@@ -196,7 +196,7 @@ cluster4.top30 <- cluster4.top30[,2,drop = F]
 cluster4.p1 <- ggheatmap(GSC_EGFR_Binder_scFv.up.top30, color = colorRampPalette(c(rgb(255/255,160/255,122/255), "red"))(50), legendName = "log2(FC)", levels_rows = rev(rownames(GSC_EGFR_Binder_scFv.up.top30))) + ggtitle(label = "RNA-seq(GSC.UP)\nEGFR_Binder vs scFv") + theme(axis.text.y = element_text(size = 8))
 cluster4.p2 <- ggheatmap(cluster4.top30, color = colorRampPalette(c(rgb(255/255,160/255,122/255), "red"))(50), legendName = "log2(FC)", levels_rows = rev(rownames(cluster4.top30))) + ggtitle(label = "scRNA-seq\nC4") + theme(axis.text.y = element_text(size = 8))
 
-#### cluster 6
+#### cluster C6
 cluster5 <- cluster.sig.markers[which(cluster.sig.markers$cluster=="5"),]
 cluster5 <- arrange(cluster5, desc(avg_log2FC))
 Control.up.cluster5 <- intersect(cluster5$gene, EGFR_Binder_scFv.up$gene)
