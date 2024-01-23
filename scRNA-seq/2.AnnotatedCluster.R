@@ -12,7 +12,7 @@ set.seed(101)
 library(future)
 plan("multicore", workers = 10)
 options(future.globals.maxSize = 100000 * 1024^2) #50G
-setwd("/data/ExtraDisk/sdf/longzhilin/ExtraWork/xiezhen/scRNAseq-CARTcell-20220501") # 91 server
+setwd("/data/scRNAseq-CARTcell-20220501") # 91 server
 set.resolutions <- seq(0.1, 1.2, by = 0.1)
 
 CART.scRNA <- readRDS("CART.scRNA.rds")
@@ -38,7 +38,7 @@ CART.scRNA.list.Standard < lapply(CART.scRNA.list, function(x){
 	return(x)
 })
 
-source(file = "/home/longzhilin/Analysis_Code/SingleCell/scRNA.Integrate.multipleSample.R")
+source(file = "/home/scRNA.Integrate.multipleSample.R")
 pdf("2.Cluster/Seurat.Standard.PC30.feature3000.pdf")
 Seurat.Standard <- Seurat.integration.reduceDimension(seurat.lists = CART.scRNA.list.Standard, assay = "RNA", set.resolutions = set.resolutions, vars.to.regress = c("mt_ratio", "nCount_RNA"),
                                                       adjusted.cellCycle = T, PC = 30, nfeatures = 3000, npcs = 50)
@@ -136,133 +136,3 @@ pdf("2.Cluster/AnnotatedCellType/cellRatio.change.pdf")
 ggbarplot(GSC.vs.Control.change, x = "group", y = "changes", fill = "type", color = "type",
           palette = c("#214DA9", "#FF1205"), position = position_dodge(0.8), ylab = "Log2(Fold change stimulation vs unstimulation)", xlab = "")
 dev.off()
-
-#### phenotype marker expression
-DefaultAssay(Seurat.Standard) <- "RNA"
-library(ComplexHeatmap)
-library(circlize)
-library(ggsci)
-genes <- read.table("2.Cluster/AnnotatedCellType/markers.txt", header = T, stringsAsFactors = F, sep = "\t")
-genes.exp <- AverageExpression(Seurat.Standard, features = genes$Gene, group.by = "cellType")
-genes.exp <- genes.exp$RNA
-genes.exp <- scale(t(genes.exp))
-
-idx <- match(colnames(genes.exp), genes$Gene)
-row_split <- genes$Type[idx]
-genes.exp <- genes.exp[as.character(change1$group),]
-pdf("2.Cluster/AnnotatedCellType/celltype.phenotypeMarker.Heatmap.pdf")
-p <- Heatmap(t(genes.exp), cluster_rows = T, cluster_columns = F, show_row_dend = F, row_split = row_split, name = "Z-score",
-        row_names_gp = gpar(fontsize = 10), column_names_gp = gpar(fontsize = 10), height = unit(14, "cm"), width = unit(8, "cm"))
-print(p)
-dev.off()
-
-#### load RNA-seq result
-library(readxl)
-source("/home/longzhilin/Analysis_Code/Combined.P.FC.R")
-GSC_EGFR_Binder_scFv.up <- read_xlsx("/data/ExtraDisk/sdd/longzhilin/Project/ExtraWork/xiezhen/RNAseq-CARTcell-20220501/Differential.result.xlsx", sheet = "GSC_EGFR_Binder_scFv.up")
-GSC_EGFR_Binder_scFv.up <- as.data.frame(GSC_EGFR_Binder_scFv.up)
-pi <- Combined.P.FC(GSC_EGFR_Binder_scFv.up[,c(2,6)], log2FC = T, log10P = F)
-GSC_EGFR_Binder_scFv.up$pi <- pi$pi
-GSC_EGFR_Binder_scFv.up <- arrange(GSC_EGFR_Binder_scFv.up, desc(pi))
-GSC_EGFR_Binder_scFv.down <- read_xlsx("/data/ExtraDisk/sdd/longzhilin/Project/ExtraWork/xiezhen/RNAseq-CARTcell-20220501/Differential.result.xlsx", sheet = "GSC_EGFR_Binder_scFv.down")
-GSC_EGFR_Binder_scFv.down <- as.data.frame(GSC_EGFR_Binder_scFv.down)
-pi <- Combined.P.FC(GSC_EGFR_Binder_scFv.down[,c(2,6)], log2FC = T, log10P = F)
-GSC_EGFR_Binder_scFv.down$pi <- pi$pi
-GSC_EGFR_Binder_scFv.down <- arrange(GSC_EGFR_Binder_scFv.down, desc(pi))
-EGFR_Binder_scFv.up <- read_xlsx("/data/ExtraDisk/sdd/longzhilin/Project/ExtraWork/xiezhen/RNAseq-CARTcell-20220501/Differential.result.xlsx", sheet = "EGFR_Binder_scFv.up")
-EGFR_Binder_scFv.up <- as.data.frame(EGFR_Binder_scFv.up)
-pi <- Combined.P.FC(EGFR_Binder_scFv.up[,c(2,6)], log2FC = T, log10P = F)
-EGFR_Binder_scFv.up$pi <- pi$pi
-EGFR_Binder_scFv.up <- arrange(EGFR_Binder_scFv.up, desc(pi))
-EGFR_Binder_scFv.down <- read_xlsx("/data/ExtraDisk/sdd/longzhilin/Project/ExtraWork/xiezhen/RNAseq-CARTcell-20220501/Differential.result.xlsx", sheet = "EGFR_Binder_scFv.down")
-EGFR_Binder_scFv.down <- as.data.frame(EGFR_Binder_scFv.down)
-pi <- Combined.P.FC(EGFR_Binder_scFv.down[,c(2,6)], log2FC = T, log10P = F)
-EGFR_Binder_scFv.down$pi <- pi$pi
-EGFR_Binder_scFv.down <- arrange(EGFR_Binder_scFv.down, desc(pi))
-
-library(ggheatmap)
-#### cluster C5
-cluster4 <- cluster.sig.markers[which(cluster.sig.markers$cluster=="4"),]
-cluster4 <- arrange(cluster4, desc(avg_log2FC))
-Control.up.cluster4 <- intersect(cluster4$gene, EGFR_Binder_scFv.up$gene)
-GSC.up.cluster4 <- intersect(cluster4$gene, GSC_EGFR_Binder_scFv.up$gene)
-# top30
-cluster4.top30 <- cluster4[match(GSC.up.cluster4[1:30], cluster4$gene),]
-GSC_EGFR_Binder_scFv.up.top30 <- GSC_EGFR_Binder_scFv.up[match(GSC.up.cluster4[1:30], GSC_EGFR_Binder_scFv.up$gene),]
-rownames(GSC_EGFR_Binder_scFv.up.top30) <- GSC_EGFR_Binder_scFv.up.top30$gene
-rownames(cluster4.top30) <- cluster4.top30$gene
-GSC_EGFR_Binder_scFv.up.top30 <- GSC_EGFR_Binder_scFv.up.top30[,2,drop = F]
-cluster4.top30 <- cluster4.top30[,2,drop = F]
-cluster4.p1 <- ggheatmap(GSC_EGFR_Binder_scFv.up.top30, color = colorRampPalette(c(rgb(255/255,160/255,122/255), "red"))(50), legendName = "log2(FC)", levels_rows = rev(rownames(GSC_EGFR_Binder_scFv.up.top30))) + ggtitle(label = "RNA-seq(GSC.UP)\nEGFR_Binder vs scFv") + theme(axis.text.y = element_text(size = 8))
-cluster4.p2 <- ggheatmap(cluster4.top30, color = colorRampPalette(c(rgb(255/255,160/255,122/255), "red"))(50), legendName = "log2(FC)", levels_rows = rev(rownames(cluster4.top30))) + ggtitle(label = "scRNA-seq\nC4") + theme(axis.text.y = element_text(size = 8))
-
-#### cluster C6
-cluster5 <- cluster.sig.markers[which(cluster.sig.markers$cluster=="5"),]
-cluster5 <- arrange(cluster5, desc(avg_log2FC))
-Control.up.cluster5 <- intersect(cluster5$gene, EGFR_Binder_scFv.up$gene)
-GSC.up.cluster5 <- intersect(cluster5$gene, GSC_EGFR_Binder_scFv.up$gene)
-# top30
-cluster5.top30 <- cluster5[match(GSC.up.cluster5[1:30], cluster5$gene),]
-GSC_EGFR_Binder_scFv.up.top30 <- GSC_EGFR_Binder_scFv.up[match(GSC.up.cluster5[1:30], GSC_EGFR_Binder_scFv.up$gene),]
-rownames(GSC_EGFR_Binder_scFv.up.top30) <- GSC_EGFR_Binder_scFv.up.top30$gene
-rownames(cluster5.top30) <- cluster5.top30$gene
-GSC_EGFR_Binder_scFv.up.top30 <- GSC_EGFR_Binder_scFv.up.top30[,2,drop = F]
-cluster5.top30 <- cluster5.top30[,2,drop = F]
-cluster5.p1 <- ggheatmap(GSC_EGFR_Binder_scFv.up.top30, color = colorRampPalette(c(rgb(255/255,160/255,122/255), "red"))(50), legendName = "log2(FC)", levels_rows = rev(rownames(GSC_EGFR_Binder_scFv.up.top30))) + ggtitle(label = "RNA-seq(GSC.UP)\nEGFR_Binder vs scFv") + theme(axis.text.y = element_text(size = 8))
-cluster5.p2 <- ggheatmap(cluster5.top30, color = colorRampPalette(c(rgb(255/255,160/255,122/255), "red"))(50), legendName = "log2(FC)", levels_rows = rev(rownames(cluster5.top30))) + ggtitle(label = "scRNA-seq\nC5") + theme(axis.text.y = element_text(size = 8))
-
-pdf("2.Cluster/AnnotatedCellType/Combined.RNAseq.pdf")
-ggarrange(cluster4.p1, cluster4.p2, ncol = 3, nrow =2)
-ggarrange(cluster5.p1, cluster5.p2, ncol = 3, nrow =2)
-dev.off()
-
-#### T state signature
-DefaultAssay(Seurat.Standard) <- "RNA"
-T.state1 <- read.table("2.Cluster/AnnotatedCellType/markers.txt", header = T, stringsAsFactors = F, sep = "\t")
-T.state.list1 <- lapply(unique(T.state1$Type), function(x){
-  a <- which(T.state1$Type == x)
-  return(T.state1$Gene[a])
-})
-names(T.state.list1) <- unique(T.state1$Type)
-
-T.state2 <- read.table("2.Cluster/AnnotatedCellType/T.signature.txt", header = T, sep = "\t", stringsAsFactors = F)
-T.state.list2 <- lapply(unique(T.state2$Type), function(x){
-  a <- which(T.state2$Type == x)
-  return(T.state2$Gene[a])
-})
-names(T.state.list2) <- unique(T.state2$Type)
-
-# merge T state
-T.state.list <- c(T.state.list1, T.state.list2[-3])
-
-# Method1: Signature score
-SignatureScore <- AddModuleScore(Seurat.Standard, features = T.state.list[c(2,4,8,9,10)])
-T.state.score <- SignatureScore@meta.data[,37:42]
-colnames(T.state.score) <- c("CellType", names(T.state.list)[c(2,4,8,9,10)])
-T.state.score.avg <- apply(T.state.score[,-1], 2, function(x){
-    avg.score <- tapply(x, T.state.score$CellType, mean)
-    return(avg.score)
-})
-
-# ggradar plot
-library(ggsci)
-library(ggradar)
-library(ggsci)
-library(dplyr)
-library(scales)
-library(tibble)
-
-cols <- pal_npg("nrc")(3)
-cols <- gsub("FF$", "", cols)
-names(cols) <- c("C6", "C5", "C8")
-
-# Normalization:0-1 for each clusters
-T.state.score.avg.norm <- apply(T.state.score.avg, 1, function(x){
-    return((x-min(x))/(max(x)-min(x)))
-})
-T.state.score.avg.norm <- t(T.state.score.avg.norm)
-T.state.score.avg.norm <- cbind(data.frame(group = rownames(T.state.score.avg.norm)), T.state.score.avg.norm)
-T.state.score.avg.norm$group <- factor(T.state.score.avg.norm$group, levels = c("C5", "C6", "C8"))
-T.state.score.avg.norm <- T.state.score.avg.norm[,c("group", "Naive marker", "Activation markers", "Cytotoxic", "Exhaustion", "Cell cycle")]
-colnames(T.state.score.avg.norm) <- c("group", "Naive", "Activation", "Cytotoxic", "Exhaustion", "Cell proliferation")
-ggradar(T.state.score.avg.norm, values.radar = c("0", "0.5", "1"), gridline.mid.colour = "grey", background.circle.colour = "white", grid.mid = 0.5, grid.max = 1, group.point.size = 3, group.line.width = 0.75, group.colours = cols)
