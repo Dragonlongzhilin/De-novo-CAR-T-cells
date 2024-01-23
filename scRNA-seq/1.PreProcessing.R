@@ -9,13 +9,10 @@ library(clustree)
 library(dplyr)
 library(ggpubr)
 set.seed(101)
-library(future)
-plan("multicore", workers = 10)
-options(future.globals.maxSize = 50000 * 1024^2) #50G
-setwd("/data/sde/longzhilin/ExtraWork/activate_data/xiazhen/scRNAseq-CARTcell-20220501") # 231 server
+setwd("/data/scRNAseq-CARTcell-20220501")
 set.resolutions <- seq(0.1, 1.2, by = 0.1)
 
-CART.scRNA <- Read10X(data.dir = "/data/activate_data/longzhilin/Analysis_results/xiazhen/scRNAseq-CARTcell-20220501/0.CellRange_result/aggr/outs/count/filtered_feature_bc_matrix")
+CART.scRNA <- Read10X(data.dir = "/data/scRNAseq-CARTcell-20220501/0.CellRange_result/filtered_feature_bc_matrix")
 CART.scRNA <- CreateSeuratObject(counts = CART.scRNA, project = "CART", min.cells = 3, min.features = 200)
 CART.scRNA[["mt_ratio"]] <- PercentageFeatureSet(CART.scRNA, pattern = "^MT-")
 CART.scRNA[["rp_ratio"]] <- PercentageFeatureSet(CART.scRNA, pattern = "^RPL|^RPS")
@@ -99,7 +96,7 @@ ggdensity(qc.info, x = "mt_ratio", title = "mt_ratio", xlab = "", color = "orig.
 dev.off()
 
 ## 2.filtering doublets
-source(file = "/data/activate_data/longzhilin/Analysis_code/SingleCell/doubletDetect.R")
+source(file = "/data/doubletDetect.R")
 doubletRate <- read.table("/data/activate_data/longzhilin/Analysis_code/SingleCell/doubletDetect.doubletRate.txt", header = T, sep = "\t", stringsAsFactors = F)
 scRNA.QC <- function(sample_id, seurat_obj, PCs = 30, doubletRate = doubletRate){
 
