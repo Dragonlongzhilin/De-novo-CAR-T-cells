@@ -3,34 +3,7 @@ library(circlize)
 library(ggpubr)
 library(DESeq2)
 library(writexl)
-setwd("/data/sde/longzhilin/ExtraWork/activate_data/Xiazhen/RNAseq-CARTcell-20220501/5.Analysis") # 231 server
-
-quantFiles <- list.files("/data/sde/longzhilin/ExtraWork/activate_data/Xiazhen/RNAseq-CARTcell-20220501/4.salmon_quant", 
-                         pattern=paste0("^quant.genes.sf$"), full.names=TRUE, recursive=T)
-quantFiles <- quantFiles[1:8]
-groups <- c("Stimulated-EGFR_Binder-rep1", "Stimulated-EGFR_Binder-rep2", "Unstimulated-EGFR_Binder-rep1", "Unstimulated-EGFR_Binder-rep2",
-            "Stimulated-EGFR_scFv-rep1", "Stimulated-EGFR_scFv-rep2", "Unstimulated-EGFR_scFv-rep1", "Unstimulated-EGFR_scFv-rep2")
-
-#####################DESeq analysis########################
-gene.matrix <- lapply(quantFiles, function(x){
-    sf <- read.table(x, stringsAsFactors = F, sep = "\t", header = T)
-    sf$Name <- gsub("\\.\\d+", "", sf$Name)
-    return(sf[,c("Name", "NumReads")])
-})
-gene.matrix <- Reduce(function(x,y) merge(x,y,by="Name"), gene.matrix)
-rownames(gene.matrix) <- gene.matrix$Name
-gene.matrix <- gene.matrix[,-1]
-colnames(gene.matrix) <- groups
-gene.matrix <- gene.matrix[which(rowSums(gene.matrix)>0),]
-
-# ID convert
-source(file = "/data/activate_data/longzhilin/Analysis_code/IDConvert.R")
-genes <- rownames(gene.matrix)
-genes.convert <- IDConvert(genes = genes, method = "clusterProfiler", fromType = "ENSEMBL", toType = c("SYMBOL"))
-index <- match(genes.convert$ENSEMBL, rownames(gene.matrix))
-gene.matrix.pro <- gene.matrix[index,]
-rownames(gene.matrix.pro) <- genes.convert$SYMBOL #18835
-saveRDS(gene.matrix.pro, file = "gene.matrix.pro.rds")
+setwd("/data/RNAseq-CARTcell-20220501/5.Analysis") # 231 server
 
 #### DEseq2 analysis
 gene.matrix.pro <- round(gene.matrix.pro)
@@ -79,37 +52,3 @@ p1 <- ggscatter(DESeq2.res$GSC_EGFR_Binder_scFv, x = "log2FoldChange", y = "log1
                 label = rownames(DESeq2.res$GSC_EGFR_Binder_scFv), label.select = interest.genes, repel = T)
 p1 + geom_hline(yintercept = -log10(0.05), lty = "dashed", lwd = 1) + geom_vline(xintercept = c(-1, 1), lty = "dashed", lwd = 1)
 
-#### gene signature
-# add selected pathways
-library(readxl)
-Tcell.pathways <- read_excel("immune.pathways.xlsx")
-Tcell.pathways <- as.data.frame(Tcell.pathways)
-Tcell.pathways <- apply(Tcell.pathways, 1, function(x){
-  name <- x[1]
-  x <- as.character(na.omit(x[-c(1,2)]))
-  names(x) <- NULL
-  res <- list(a = x)
-  names(res) <- name
-  return(res)
-})
-Tcell.pathways <- unlist(Tcell.pathways, recursive = F)
-Tcell.pathways <- Tcell.pathways[-7]
-
-library(GSVA)
-exp.matrix <- readRDS("gene.matrix.pro.rds")
-# ref: ImmuneSignatureGeneSet.T.Chung.2017.NatureComm
-T.state <- read.table("T.signature.txt", header = T, sep = "\t", stringsAsFactors = F)
-T.state.list <- lapply(unique(T.state$Type), function(x){
-  a <- which(T.state$Type == x)
-  return(T.state$Gene[a])
-})
-names(T.state.list) <- unique(T.state$Type)
-T.state.list <- T.state.list[-2]
-T.state.list <- c(Tcell.pathways, T.state.list)
-#T.state.list <- T.state.list[-c(1,3,4,5,7,9,11,13)]
-gsva.score <- gsva(expr = as.matrix(exp.matrix), gset.idx.list = T.state.list, method = "gsva", kcdf = "Poisson")
-column_ha <- HeatmapAnnotation(Condition = c(rep("Stimulate", 2), rep("Unstimulate", 2),rep("Stimulate", 2), rep("Unstimulate", 2)),
-                               col = list(Condition = c("Unstimulate" = "#619CFF", "Stimulate" = "#F8766D")))
-p <- Heatmap(gsva.score, show_row_dend = F, show_column_dend = F, name = "GSVA score", top_annotation = column_ha,
-        row_names_gp = gpar(fontsize = 10), column_names_gp = gpar(fontsize = 10), height = unit(5, "cm"), width = unit(6, "cm"))
-print(p)
