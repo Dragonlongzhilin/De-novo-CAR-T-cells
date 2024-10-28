@@ -31,7 +31,7 @@ CART.scRNA@meta.data$CC.Difference <- CART.scRNA@meta.data$S.Score - CART.scRNA@
 ## select the top variable genes
 DefaultAssay(CART.scRNA) <- "RNA"
 CART.scRNA.list <- SplitObject(CART.scRNA, split.by = "orig.ident")
-CART.scRNA.list.Standard < lapply(CART.scRNA.list, function(x){
+CART.scRNA.list.Standard <- lapply(CART.scRNA.list, function(x){
 	DefaultAssay(x) <- "RNA"
 	x <- NormalizeData(x, verbose = FALSE)
 	x <- FindVariableFeatures(x, selection.method = "vst", nfeatures = 3000, verbose = FALSE)
