@@ -96,8 +96,7 @@ ggdensity(qc.info, x = "mt_ratio", title = "mt_ratio", xlab = "", color = "orig.
 dev.off()
 
 ## 2.filtering doublets
-source(file = "/data/doubletDetect.R")
-doubletRate <- read.table("/data/activate_data/longzhilin/Analysis_code/SingleCell/doubletDetect.doubletRate.txt", header = T, sep = "\t", stringsAsFactors = F)
+doubletRate <- read.table("/data/doubletDetect.doubletRate.txt", header = T, sep = "\t", stringsAsFactors = F)
 scRNA.QC <- function(sample_id, seurat_obj, PCs = 30, doubletRate = doubletRate){
 
     cat(sample_id, ":remove doublets ...\n")
